@@ -49,12 +49,21 @@ export class AuthController {
     @Post('logout')
     async logout(@Req() req: Request, @Res() res: Response) {
         const refreshToken = req.cookies['refresh_token'];
-        const decodedRefreshToken = await this.jwtService.decode(refreshToken);
+        const decodedRefreshToken = await this.validateToken(refreshToken);
 
         const logoutData = { email: decodedRefreshToken.email, userId: decodedRefreshToken.sub };
         await this.authService.logout(logoutData);
         res.cookie('access_token', '', { expires: new Date(0) });
         res.cookie('refresh_token', '', { expires: new Date(0) });
         return res.send({ message: 'Logout successful' });
+    }
+
+    async validateToken(token: string) {
+        try {
+            const validToken = await this.jwtService.verify(token, { secret: process.env.JWT_SECRET });
+            return validToken;
+        } catch (error) {
+            console.log('error', error);
+        }
     }
 }
