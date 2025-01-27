@@ -57,14 +57,12 @@ export class JwtGuard implements CanActivate {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 maxAge: 1 * 60 * 1000,
-                signed: true,
             });
 
             request.res.cookie('refresh_token', newTokens.refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 maxAge: 7 * 24 * 60 * 60 * 1000,
-                signed: true,
             });
 
             return true;
