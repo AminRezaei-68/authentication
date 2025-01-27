@@ -1,0 +1,1 @@
+type MessageResponse = { message: string };

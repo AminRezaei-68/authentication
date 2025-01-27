@@ -12,12 +12,13 @@ export class UsersController {
     // }
 
     @Get(':id')
-    findOne(@Param('id') id: number) {
-        return this.usersServive.findOne(id);
+    findOne(@Param('id') id: string): Promise<UserReponse> {
+        const nummericalId = parseInt(id);
+        return this.usersServive.findOne(nummericalId);
     }
 
     @Get()
-    findAll() {
+    findAll(): Promise<UserReponse[]> {
         return this.usersServive.findAll();
     }
 

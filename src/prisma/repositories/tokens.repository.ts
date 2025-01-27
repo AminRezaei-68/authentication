@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma.service';
 export class TokensRepository {
     constructor(private readonly prismaService: PrismaService) {}
 
-    async saveToken(data: SaveToken) {
+    async saveToken(data: SaveToken): Promise<RefreshToken> {
         const { id, token } = data;
         console.log('the id is:', id);
         console.log('the refresh token is:', token);
@@ -17,8 +17,16 @@ export class TokensRepository {
         });
     }
 
-    async findOne(data: FindOne) {
-        const { id } = data;
+    async deleteToken(id: number): Promise<RefreshToken> {
+        const deleteRefreshToken = await this.prismaService.refreshToken.delete({ where: { userId: id } });
+        return deleteRefreshToken;
+    }
+
+    async findOne(id: number): Promise<RefreshToken> {
         return await this.prismaService.refreshToken.findUnique({ where: { userId: id } });
+    }
+
+    async findAll(): Promise<RefreshToken[]> {
+        return await this.prismaService.refreshToken.findMany();
     }
 }

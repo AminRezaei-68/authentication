@@ -1,4 +1,4 @@
-type FindUser = {
-    id: number | null;
-    email: string | null;
-};
+// type FindUser = {
+//     id: number | null;
+//     email: string | null;
+// };
