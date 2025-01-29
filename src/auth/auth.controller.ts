@@ -4,7 +4,7 @@ import { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './common/dtos/register.dto';
 import { LoginDto } from './common/dtos/login.dto';
-import { JwtGuard } from 'src/common/guards/jwt.guard';
+import { JwtGuard } from './common/guards/jwt.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -53,7 +53,7 @@ export class AuthController {
     }
 
     @Get('tokens')
-    async getTokens(): Promise<any> {
+    async getTokens(): Promise<RefreshToken[]> {
         return this.authService.getAllTokens();
     }
 }

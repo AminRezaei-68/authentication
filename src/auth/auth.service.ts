@@ -8,6 +8,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { TokensRepository } from 'src/prisma/repositories/tokens.repository';
 import { UsersRepository } from 'src/prisma/repositories/users.repository';
 import { ConfigService } from '@nestjs/config';
+import { JwtUtil } from './common/utilities/jwt.util';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
         private readonly jwtService: JwtService,
         private readonly tokensRepository: TokensRepository,
         private readonly usersRepository: UsersRepository,
+        private readonly jwtUtil: JwtUtil,
         @Inject('LOGGER_SERVICE') private readonly client: ClientProxy,
     ) {}
 
@@ -65,7 +67,7 @@ export class AuthService {
 
         const payload = { id: user.id, email: user.email };
 
-        const { accessToken, refreshToken } = await this.createToken(payload);
+        const { accessToken, refreshToken } = await this.jwtUtil.createTokens(payload);
 
         this.client.emit('log', { action: 'login', email });
         console.log('data send to logger.');
@@ -75,9 +77,10 @@ export class AuthService {
 
     async logout(refreshToken: string): Promise<void> {
         const decodedRefreshToken = await this.validateRefreshToken(refreshToken);
-        const { sub, email } = decodedRefreshToken;
+        const { id, email } = decodedRefreshToken;
         console.log(`The user with email : ${email} is logout.`);
-        const deletedRefreshToken = await this.tokensRepository.deleteToken(sub);
+        console.log('the id is: ', id);
+        const deletedRefreshToken = await this.tokensRepository.deleteToken(id);
         console.log(`the "${deletedRefreshToken}" refresh token deleted.`);
 
         this.client.emit('log', { action: 'logout', email });
@@ -87,30 +90,31 @@ export class AuthService {
         return this.tokensRepository.findAll();
     }
 
-    async createToken(data: CreateToken): Promise<TokenResponse> {
-        const { id, email } = data;
-        const payload = { sub: id, email: email };
+    // async createToken(data: CreateToken): Promise<TokenResponse> {
+    //     const { id, email } = data;
+    //     const payload = { sub: id, email: email };
 
-        const accessToken = await this.jwtService.signAsync(payload, {
-            expiresIn: '1m',
-            secret: this.configService.get('JWT_SECRET_Access_Token'),
-        });
-        const refreshToken = await this.jwtService.signAsync(payload, {
-            expiresIn: '2m',
-            secret: this.configService.get('JWT_SECRET_Refresh_Token'),
-        });
+    //     const accessToken = await this.jwtService.signAsync(payload, {
+    //         expiresIn: '1m',
+    //         secret: this.configService.get('JWT_SECRET_Access_Token'),
+    //     });
+    //     const refreshToken = await this.jwtService.signAsync(payload, {
+    //         expiresIn: '2m',
+    //         secret: this.configService.get('JWT_SECRET_Refresh_Token'),
+    //     });
 
-        const saveData = { id: id, token: refreshToken };
-        await this.tokensRepository.saveToken(saveData);
+    //     const saveData = { id: id, token: refreshToken };
+    //     await this.tokensRepository.saveToken(saveData);
 
-        return { accessToken: accessToken, refreshToken: refreshToken };
-    }
+    //     return { accessToken: accessToken, refreshToken: refreshToken };
+    // }
 
     private async validateRefreshToken(refreshToken: string): Promise<DecodeToken> {
         try {
             const validToken = await this.jwtService.verifyAsync(refreshToken, {
-                secret: this.configService.get('JWT_SECRET_Refresh_Token'),
+                secret: this.configService.get('JWT_SECRET_REFRESH_TOKEN'),
             });
+            console.log('in validate refresh token: ', validToken);
             return validToken;
         } catch (error) {
             console.log('error', error);

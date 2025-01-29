@@ -1,16 +1,16 @@
 import { BadRequestException, CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { AuthService } from 'src/auth/auth.service';
 import { TokensRepository } from 'src/prisma/repositories/tokens.repository';
 import { ConfigService } from '@nestjs/config';
+import { JwtUtil } from '../utilities/jwt.util';
 
 @Injectable()
 export class JwtGuard implements CanActivate {
     constructor(
         private readonly jwtService: JwtService,
-        private readonly authService: AuthService,
         private readonly tokensRepository: TokensRepository,
         private readonly configService: ConfigService,
+        private readonly jwtUtil: JwtUtil,
     ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -21,9 +21,17 @@ export class JwtGuard implements CanActivate {
         const refreshToken = request.cookies['refresh_token'];
 
         const decodedAccessToken = await this.validateAccessToken(accessToken);
+        const decodedRefreshToken = await this.validateRefreshToken(refreshToken);
 
-        if (decodedAccessToken) {
+        console.log('in jwt gaurd decode access token : ', decodedAccessToken);
+
+        if (decodedAccessToken && decodedRefreshToken) {
             console.log('Access Token does not expired go ahead.');
+
+            if (decodedAccessToken.id !== decodedRefreshToken.id) {
+                throw new UnauthorizedException('Credential failed.');
+            }
+
             return true;
         } else {
             /*
@@ -46,11 +54,11 @@ export class JwtGuard implements CanActivate {
                 */
 
             // new logic
-            const decodedRefreshToken = await this.validateRefreshToken(refreshToken);
-            const { sub, email } = decodedRefreshToken;
-            const payload = { id: sub, email: email };
+            // const decodedRefreshToken = await this.validateRefreshToken(refreshToken);
+            const { id, email } = decodedRefreshToken;
+            const payload = { id: id, email: email };
             //
-            const newTokens = await this.authService.createToken(payload);
+            const newTokens = await this.jwtUtil.createTokens(payload);
             console.log('new tokens:', newTokens);
 
             request.res.cookie('access_token', newTokens.accessToken, {
@@ -127,7 +135,7 @@ export class JwtGuard implements CanActivate {
 
     private async validateAccessToken(token: string): Promise<DecodeToken> {
         try {
-            const validToken = await this.jwtService.verifyAsync(token, { secret: this.configService.get('JWT_SECRET_Access_Token') });
+            const validToken = await this.jwtService.verifyAsync(token, { secret: this.configService.get('JWT_SECRET_ACCESS_TOKEN') });
             return validToken;
         } catch (error) {
             console.log('error', error);
@@ -138,14 +146,14 @@ export class JwtGuard implements CanActivate {
         // const decodedRefreshToken = await this.validateToken(refreshToken);
         try {
             const decodedRefreshToken = await this.jwtService.verifyAsync(refreshToken, {
-                secret: this.configService.get('JWT_SECRET_Refresh_Token'),
+                secret: this.configService.get('JWT_SECRET_REFRESH_TOKEN'),
             });
 
             if (decodedRefreshToken) {
                 console.log('Refresh Token does not expired.');
                 console.log('refresh token:', decodedRefreshToken);
                 console.log('refresh token:', refreshToken);
-                const databaseRefrshToken = await this.tokensRepository.findOne(decodedRefreshToken.sub);
+                const databaseRefrshToken = await this.tokensRepository.findOne(decodedRefreshToken.id);
 
                 console.log('database refresh token:', databaseRefrshToken);
 
@@ -157,7 +165,8 @@ export class JwtGuard implements CanActivate {
                 return decodedRefreshToken;
             }
         } catch (error) {
-            throw new BadRequestException('You should login again.');
+            // throw new BadRequestException('You should login again.');
+            throw error;
         }
     }
 }
