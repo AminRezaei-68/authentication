@@ -1,5 +1,6 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { JwtGuard } from 'src/auth/common/guards/jwt.guard';
 
 @Controller('users')
 export class UsersController {
@@ -18,6 +19,7 @@ export class UsersController {
     }
 
     @Get()
+    @UseGuards(JwtGuard)
     findAll(): Promise<UserReponse[]> {
         return this.usersServive.findAll();
     }
